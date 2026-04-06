@@ -1,0 +1,3 @@
+com\resume\analyzer\controller\ResumeController.class
+com\resume\analyzer\service\AiAnalysisService.class
+com\resume\analyzer\service\PdfExtractorService.class

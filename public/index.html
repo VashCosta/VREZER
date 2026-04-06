@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="VREZER — AI-powered career intelligence platform. Upload your resume and discover your future career path with precision insights.">
+    <title>VREZER | Vision Your Future</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="/style.css">
+</head>
+
+<body class="dark">
+
+    <!-- ══════════ TOP BAR ══════════ -->
+    <header class="topbar" id="topbar">
+        <div class="topbar-left">
+            <span class="logo">V R E Z E R</span>
+            <div class="system-status"><span class="status-pulse"></span> CORE MONITORING: ACTIVE</div>
+        </div>
+        <div class="ticker-zone" id="ticker-wrap">
+            <span class="ticker-dot"></span>
+            <span id="ticker">READY — UPLOAD YOUR RESUME TO BEGIN YOUR CAREER ANALYSIS</span>
+        </div>
+        <div class="topbar-right">
+            <span class="live-clock" id="live-time"></span>
+            <div class="theme-row">
+                <i class="fa-solid fa-moon t-icon" id="ti-dark"></i>
+                <label class="t-switch">
+                    <input type="checkbox" id="mode-btn" aria-label="Toggle theme">
+                    <span class="t-track"><span class="t-thumb"></span></span>
+                </label>
+                <i class="fa-solid fa-sun t-icon" id="ti-light"></i>
+            </div>
+            <button id="export-btn" class="tb-btn"><i class="fa-solid fa-download"></i> Export</button>
+        </div>
+    </header>
+
+    <!-- ══════════ HERO / UPLOAD ══════════ -->
+    <section id="upload-section" class="hero-screen">
+        <div class="hero-bg">
+            <div class="hgrid"></div>
+            <div class="orb o1"></div>
+            <div class="orb o2"></div>
+            <div class="orb o3"></div>
+            <canvas id="particles-canvas" class="particles-canvas"></canvas>
+        </div>
+
+        <div class="hero-body">
+            <div class="hero-badge"><span class="bdot"></span>AI-POWERED CAREER INTELLIGENCE PLATFORM</div>
+
+            <h1 class="hero-title">
+                <span class="ht-1">VISION</span>
+                <span class="ht-2">YOUR</span>
+                <span class="ht-3">CAREER</span>
+            </h1>
+
+            <p class="hero-sub">Upload your resume and the AI engine maps your career trajectory<br>across elite
+                Indian IT companies with real-time salary intelligence.</p>
+
+
+
+            <div class="upload-panel">
+                <div class="drop-box" id="drop-zone">
+                    <input id="file-input" type="file" accept="application/pdf" hidden>
+                    <div class="drop-icon-box">
+                        <i class="fa-solid fa-file-arrow-up drop-icon"></i>
+                        <div class="drop-icon-ring r1"></div>
+                        <div class="drop-icon-ring r2"></div>
+                    </div>
+                    <div class="drop-labels">
+                        <strong>Drop your resume here</strong>
+                        <span>PDF format · Max 5MB</span>
+                    </div>
+                    <button class="btn-browse" onclick="document.getElementById('file-input').click()">
+                        <i class="fa-solid fa-folder-open"></i> Browse Files
+                    </button>
+                    <div class="file-status" id="file-status"></div>
+                </div>
+                <button id="analyse-btn" class="btn-analyse" disabled>
+                    <span>Analyse Resume</span><i class="fa-solid fa-bolt"></i>
+                </button>
+            </div>
+
+            <div class="feat-chips">
+                <span class="chip"><i class="fa-solid fa-shield-halved"></i> ATS Score</span>
+                <span class="chip"><i class="fa-solid fa-chart-line"></i> Salary Forecast</span>
+                <span class="chip"><i class="fa-solid fa-crosshairs"></i> Skill Radar</span>
+                <span class="chip"><i class="fa-solid fa-sitemap"></i> Domain Fit</span>
+                <span class="chip"><i class="fa-solid fa-map-location-dot"></i> Location Hub</span>
+                <span class="chip"><i class="fa-solid fa-robot"></i> AI Prediction</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══════════ LOADING ══════════ -->
+    <section id="loading-section" class="load-screen hidden">
+        <div class="load-body">
+            <div class="load-rings">
+                <div class="lr lr1"></div>
+                <div class="lr lr2"></div>
+                <div class="lr lr3"></div>
+                <i class="fa-solid fa-bolt load-bolt"></i>
+            </div>
+            <p id="load-msg" class="load-msg">Analysing your resume…</p>
+            <div class="prog-track">
+                <div class="prog-fill" id="prog-fill"></div>
+            </div>
+            <div class="prog-steps">
+                <span class="ps active" id="step-1"><i class="fa-solid fa-circle-check"></i> Extract</span>
+                <span class="ps" id="step-2"><i class="fa-solid fa-circle-check"></i> Analyse</span>
+                <span class="ps" id="step-3"><i class="fa-solid fa-circle-check"></i> Predict</span>
+                <span class="ps" id="step-4"><i class="fa-solid fa-circle-check"></i> Map</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══════════ DASHBOARD ══════════ -->
+    <section id="dashboard-section" class="dashboard hidden">
+
+
+        <!-- ── DASHBOARD RESUME CARD (Compact Overview) ── -->
+        <div class="ai-dossier" id="ai-dossier">
+            <div class="dossier-header">
+                <div class="dossier-id">
+                    <div class="dossier-avatar" id="drc-avatar">?</div>
+                    <div class="dossier-name-role">
+                        <h2 class="dossier-name" id="drc-name">—</h2>
+                        <span class="dossier-role" id="drc-role">—</span>
+                    </div>
+                </div>
+                <div class="dossier-actions">
+                    <button class="btn-new" id="reset-btn"><i class="fa-solid fa-rotate-left"></i> New Analysis</button>
+                    <button class="btn-exp" id="export-btn2"><i class="fa-solid fa-download"></i> Export
+                        Dossier</button>
+                </div>
+            </div>
+
+            <div class="dossier-main">
+                <div class="dossier-left">
+                    <div class="dossier-section-title"><i class="fa-solid fa-wand-magic-sparkles"></i> Strategic Career
+                        Forecast</div>
+                    <div class="dossier-forecast-card">
+                        <p class="df-text" id="ai-prediction">Generating predictive career trajectory based on resume
+                            markers...</p>
+                        <div class="drc-meta">
+                            <span class="drc-tag" id="drc-exp"><i class="fa-solid fa-briefcase"></i> —</span>
+                            <span class="drc-tag" id="drc-edu"><i class="fa-solid fa-graduation-cap"></i> —</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dossier-right">
+                    <div class="dossier-section-title"><i class="fa-solid fa-shield-halved"></i> SWOT Intelligence
+                        Analysis</div>
+                    <div class="swot-grid">
+                        <div class="sw-item s-strengths">
+                            <div class="sw-label"><i class="fa-solid fa-bolt"></i> Strengths</div>
+                            <div class="sw-list" id="swot-strengths"></div>
+                        </div>
+                        <div class="sw-item s-weaknesses">
+                            <div class="sw-label"><i class="fa-solid fa-triangle-exclamation"></i> Weaknesses</div>
+                            <div class="sw-list" id="swot-weaknesses"></div>
+                        </div>
+                        <div class="sw-item s-opps">
+                            <div class="sw-label"><i class="fa-solid fa-arrow-trend-up"></i> Opportunities</div>
+                            <div class="sw-list" id="swot-opps"></div>
+                        </div>
+                        <div class="sw-item s-risks">
+                            <div class="sw-label"><i class="fa-solid fa-skull-crossbones"></i> Risks / Improvements
+                            </div>
+                            <div class="sw-list" id="swot-risks"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ── ROW A: ATS + Salary + Radar + Bar ── -->
+        <div class="dash-section-label"><i class="fa-solid fa-chart-pie"></i> Performance Overview</div>
+        <div class="grid-row row-a">
+
+            <div class="card c-ats">
+                <div class="card-label"><i class="fa-solid fa-shield-halved"></i> ATS Score</div>
+                <div class="donut-wrap">
+                    <canvas id="ats-chart"></canvas>
+                    <div class="donut-center">
+                        <span class="dn" id="ats-val">0</span>
+                        <span class="du">%</span>
+                        <span class="ds" id="ats-label">—</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card c-sal">
+                <div class="card-label"><i class="fa-solid fa-indian-rupee-sign"></i> Salary Forecast</div>
+                <div class="donut-wrap">
+                    <canvas id="sal-chart"></canvas>
+                    <div class="donut-center">
+                        <span class="dn sal-dn" id="sal-val">—</span>
+                        <span class="du">LPA</span>
+                        <span class="ds">Dream Role</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card c-radar">
+                <div class="card-label"><i class="fa-solid fa-crosshairs"></i> Skill Radar</div>
+                <canvas id="radar-chart" style="max-height:190px"></canvas>
+            </div>
+
+            <div class="card c-bar">
+                <div class="card-label"><i class="fa-solid fa-sliders"></i> Capability Metrics</div>
+                <canvas id="bar-chart" style="max-height:190px"></canvas>
+            </div>
+
+        </div>
+
+        <!-- ── ROW B: Career Tiers ── -->
+        <div class="dash-section-label"><i class="fa-solid fa-layer-group"></i> Career Trajectory — 3 Tier Analysis
+        </div>
+        <div class="grid-row row-b">
+
+            <div class="card tier-card tc-elite" id="card-t1">
+                <div class="tier-glow"></div>
+                <div class="tier-top">
+                    <span class="tier-badge tb-elite">TIER I · ELITE</span>
+                    <i class="fa-solid fa-crown tier-icon ti-elite"></i>
+                </div>
+                <div class="tier-label">Dream Role · 3–5 Years</div>
+                <div class="tier-role" id="t1-role">—</div>
+                <div class="tier-metas">
+                    <div class="tm"><i class="fa-solid fa-building-columns"></i><span id="t1-company">—</span></div>
+                    <div class="tm"><i class="fa-solid fa-location-dot"></i><span id="t1-loc">—</span></div>
+                </div>
+                <div class="tier-sal-row">
+                    <span class="tier-sal te-sal" id="t1-sal">—</span>
+                    <span class="tier-sal-lbl">/ year</span>
+                </div>
+                <div class="tier-prog">
+                    <div class="tp-fill tpf-elite" style="width:88%"></div>
+                </div>
+            </div>
+
+            <div class="card tier-card tc-growth" id="card-t2">
+                <div class="tier-glow"></div>
+                <div class="tier-top">
+                    <span class="tier-badge tb-growth">TIER II · GROWTH</span>
+                    <i class="fa-solid fa-chart-line tier-icon ti-growth"></i>
+                </div>
+                <div class="tier-label">Realistic Now · Target Role</div>
+                <div class="tier-role" id="t2-role">—</div>
+                <div class="tier-metas">
+                    <div class="tm"><i class="fa-solid fa-building-columns"></i><span id="t2-company">—</span></div>
+                    <div class="tm"><i class="fa-solid fa-location-dot"></i><span id="t2-loc">—</span></div>
+                </div>
+                <div class="tier-sal-row">
+                    <span class="tier-sal tg-sal" id="t2-sal">—</span>
+                    <span class="tier-sal-lbl">/ year</span>
+                </div>
+                <div class="tier-prog">
+                    <div class="tp-fill tpf-growth" style="width:62%"></div>
+                </div>
+            </div>
+
+            <div class="card tier-card tc-base" id="card-t3">
+                <div class="tier-glow"></div>
+                <div class="tier-top">
+                    <span class="tier-badge tb-base">TIER III · BASELINE</span>
+                    <i class="fa-solid fa-rocket tier-icon ti-base"></i>
+                </div>
+                <div class="tier-label">Immediate Match · Apply Now</div>
+                <div class="tier-role" id="t3-role">—</div>
+                <div class="tier-metas">
+                    <div class="tm"><i class="fa-solid fa-building-columns"></i><span id="t3-company">—</span></div>
+                    <div class="tm"><i class="fa-solid fa-location-dot"></i><span id="t3-loc">—</span></div>
+                </div>
+                <div class="tier-sal-row">
+                    <span class="tier-sal tb-sal" id="t3-sal">—</span>
+                    <span class="tier-sal-lbl">/ year</span>
+                </div>
+                <div class="tier-prog">
+                    <div class="tp-fill tpf-base" style="width:40%"></div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ── ROW C: DOMAIN FIT GRID (NEW) ── -->
+        <div class="dash-section-label"><i class="fa-solid fa-sitemap"></i> Domain Fit Intelligence — Where You Belong
+        </div>
+        <div class="domain-grid" id="domain-grid">
+            <!-- Populated by JS -->
+            <div class="domain-placeholder">
+                <i class="fa-solid fa-satellite-dish"></i>
+                <span>Domains will appear after analysis</span>
+            </div>
+        </div>
+
+        <!-- ── ROW D: Insights Row ── -->
+        <div class="dash-section-label"><i class="fa-solid fa-magnifying-glass-chart"></i> Career Insights</div>
+        <div class="grid-row row-d">
+
+            <div class="card c-improve">
+                <div class="card-label"><i class="fa-solid fa-wand-magic-sparkles"></i> Resume Improvements</div>
+                <ul class="hint-list" id="improvements-list"></ul>
+            </div>
+
+            <div class="card c-gaps">
+                <div class="card-label"><i class="fa-solid fa-triangle-exclamation"></i> Skill Gaps to Bridge</div>
+                <div class="gap-tags" id="gap-list"></div>
+                <p class="gap-hint">Acquire these to boost your ATS and salary range</p>
+            </div>
+
+            <div class="card c-location">
+                <div class="card-label"><i class="fa-solid fa-map-location-dot"></i> Location Hub · All-India IT</div>
+                <select id="city-sel" class="v-select">
+                    <option value="">Select City to Explore</option>
+                    <option value="bengaluru">🏙 Bengaluru — 45–90 LPA</option>
+                    <option value="hyderabad">🏙 Hyderabad — 35–75 LPA</option>
+                    <option value="pune">🏙 Pune — 30–60 LPA</option>
+                    <option value="mumbai">🏙 Mumbai — 40–80 LPA</option>
+                    <option value="noida">🏙 Noida — 25–50 LPA</option>
+                    <option value="chennai">🏙 Chennai — 28–55 LPA</option>
+                    <option value="gurgaon">🏙 Gurgaon — 30–65 LPA</option>
+                    <option value="kolkata">🏙 Kolkata — 18–40 LPA</option>
+                </select>
+                <div class="loc-companies" id="loc-companies">
+                    <div class="loc-ph"><i class="fa-solid fa-compass"></i> Select a city to see top hiring companies
+                    </div>
+                </div>
+                <div class="live-feed" id="activity-feed"></div>
+            </div>
+
+        </div>
+
+        <!-- ── ROW E: AI Prediction ── -->
+        <div class="grid-row row-e">
+            <div class="card c-predict">
+                <div class="predict-inner">
+                    <div class="predict-left">
+                        <div class="card-label"><i class="fa-solid fa-robot"></i> AI Career Prediction <span
+                                class="ldot"></span></div>
+                        <div class="predict-text" id="prediction-text">—</div>
+                    </div>
+                    <div class="predict-metrics">
+                        <div class="pm"><span class="pm-val" id="pred-fit">—</span><span class="pm-lbl">Market
+                                Fit</span></div>
+                        <div class="pm"><span class="pm-val" id="pred-growth">—</span><span class="pm-lbl">Growth</span>
+                        </div>
+                        <div class="pm"><span class="pm-val" id="pred-ready">—</span><span class="pm-lbl">Job
+                                Ready</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </section>
+
+    <script src="/script.js"></script>
+</body>
+
+</html>
