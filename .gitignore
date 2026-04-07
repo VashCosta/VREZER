@@ -1,0 +1,34 @@
+# Java/Maven
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.tar.gz
+.mvn/wrapper/maven-wrapper.jar
+
+# IDEs
+.vscode/
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+.factorypath
+
+# Node/Frontend
+node_modules/
+dist/
+build/
+.cache/
+.netlify/
+
+# Environment and Secrets
+.env
+.env.local
+*.log
+properties.local
+
+# OS files
+.DS_Store
+Thumbs.db
