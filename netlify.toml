@@ -1,12 +1,12 @@
 [build]
-  publish = "public"
+  publish = "."
   functions = "netlify/functions"
   command = "npm run build"
 
 [dev]
   command = "npm run dev"
   port = 8888
-  publish = "public"
+  publish = "."
   targetPort = 8888
 
 [[redirects]]
