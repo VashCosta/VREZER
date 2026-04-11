@@ -13,7 +13,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const uploadSect = $('upload-section'), loadSect = $('loading-section'), dashSect = $('dashboard-section');
 
     let currentFile = null, charts = {}, lastData = null;
-
+    
+    // ── PDF.js Configuration ──────────────────────
+    if (typeof pdfjsLib !== 'undefined') {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    }
     // ── Clock ──────────────────────────────────────
     const clockEl = $('live-time');
     const tick = () => { if (clockEl) clockEl.textContent = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }); };
@@ -82,25 +86,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             resetDashboard();
-
-            const fd = new FormData();
-            fd.append('file', currentFile);
-            const exRes = await fetch('/.netlify/functions/extract', { method: 'POST', body: fd });
-            const exJson = await exRes.json();
             
-            if (exJson.error) {
+            const apiKeyInput = $('api-key-input');
+            const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
+            if (!apiKey) {
                 clearInterval(iv);
-                showToast(exJson.message || 'Resume extraction failed. Check file format.', 'fa-solid fa-file-exclamation');
+                showToast('Please enter your Gemini API Key.', 'fa-solid fa-key');
+                setBtnCooldown(analyseBtn, 3000);
+                return;
+            }
+
+            let extractedText = '';
+            try {
+                const arrayBuffer = await currentFile.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                let textChunks = [];
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const content = await page.getTextContent();
+                    textChunks.push(content.items.map(it => it.str).join(' '));
+                }
+                extractedText = textChunks.join('\n');
+            } catch (err) {
+                clearInterval(iv);
+                showToast('Resume extraction failed. Check file format.', 'fa-solid fa-file-exclamation');
                 setBtnCooldown(analyseBtn, 5000);
                 return;
             }
 
-            const anRes = await fetch('/.netlify/functions/analyze', { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({ text: exJson.text }) 
-            });
-            const data = await anRes.json();
+            if (!extractedText.trim()) throw new Error("No text found in PDF");
+
+            const data = await callGeminiAPI(extractedText, apiKey);
 
             clearInterval(iv);
 
@@ -118,6 +134,59 @@ document.addEventListener('DOMContentLoaded', () => {
             clearInterval(iv);
             showToast('Analysis connection lost. Retrying...', 'fa-solid fa-wifi');
             setTimeout(() => location.reload(), 3000);
+        }
+    }
+
+    async function callGeminiAPI(resumeText, apiKey) {
+        const modelId = "gemini-1.5-flash";
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
+        
+        const prompt = `You are a senior career analyst for the Indian IT industry. Analyse this resume carefully and respond ONLY with valid JSON. Base all predictions on the actual skills, experience, and education found in the resume. 
+JSON schema:
+{
+  "name": "<candidate full name from resume>",
+  "role": "<current or most recent role>",
+  "bestCity": "<one of: bengaluru, hyderabad, pune, mumbai, noida, chennai, gurgaon, kolkata>",
+  "atsScore": <integer 0-100 based on keyword richness and formatting>,
+  "summary": "<Compelling 1-sentence career mission statement for a cinematic dashboard>",
+  "experience": "<total years of experience e.g. 3 years>",
+  "education": "<highest qualification e.g. B.Tech CSE, VIT 2022>",
+  "tier1": { "role": "<aspirational role in 3-5 years>", "company": "<top Indian/MNC IT company suitable for this profile>", "salary": "<realistic LPA range e.g. 45-70 LPA>", "city": "<best city in India for this role>", "state": "<state>" },
+  "tier2": { "role": "<mid-level realistic role now>", "company": "<mid-tier Indian IT company>", "salary": "<realistic LPA range>", "city": "<city>", "state": "<state>" },
+  "tier3": { "role": "<entry or current level role>", "company": "<accessible Indian IT company>", "salary": "<realistic LPA range>", "city": "<city>", "state": "<state>" },
+  "topSkills": ["<strength1>", "<strength2>", "<strength3>", "<strength4>"],
+  "skillGaps": ["<gap1>", "<gap2>", "<gap3>"],
+  "improvements": ["<improvement1>", "<improvement2>", "<improvement3>"],
+  "prediction": "<1 sentence prediction of the candidate's career in 5 years based on current trajectory>",
+  "domains": [
+    { "name": "<domain name e.g. Full Stack Development>", "icon": "<one of: code, cloud, brain, shield, chart-bar, mobile, database, microchip>", "match": <integer 60-100 fit percentage based on resume>, "color": "<one of: violet, blue, green, amber, pink, cyan>", "roles": ["<job role 1>", "<job role 2>", "<job role 3>"] },
+    { "name": "<domain 2>", "icon": "<icon>", "match": <match%>, "color": "<color>", "roles": ["<role1>", "<role2>", "<role3>"] }
+  ]
+}
+
+Resume:
+${resumeText.substring(0, 4000)}`;
+
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: prompt }] }],
+                    generationConfig: { responseMimeType: "application/json", temperature: 0.3 }
+                })
+            });
+            
+            if (!res.ok) {
+                const errData = await res.json();
+                return { error: true, message: errData.error?.message || 'API Call Failed' };
+            }
+            
+            const data = await res.json();
+            const text = data.candidates[0].content.parts[0].text;
+            return JSON.parse(text);
+        } catch (e) {
+            return { error: true, message: e.message };
         }
     }
 
