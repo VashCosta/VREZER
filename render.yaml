@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: vrezer
+    env: docker
+    region: ohio
+    plan: free
+    branch: main
+    envVars:
+      - key: VONE_CORE_KEY
+        sync: false
