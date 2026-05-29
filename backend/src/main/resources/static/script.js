@@ -84,11 +84,19 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             resetDashboard();
 
-            // CLient-side parsing
-            const exText = await extractTextFromPDF(currentFile);
-            if (!exText || exText.trim().length === 0) {
-                throw new Error("Could not extract any readable text from this PDF.");
+            // Backend parsing (preserves structure and newlines)
+            const fd = new FormData();
+            fd.append('file', currentFile);
+            const exRes = await fetch('/api/analyzer/extract', {
+                method: 'POST',
+                body: fd
+            });
+            if (!exRes.ok) {
+                const errText = await exRes.text();
+                throw new Error(errText || "Could not extract any readable text from this PDF.");
             }
+            const exJson = await exRes.json();
+            const exText = exJson.text;
 
             // Call Backend API
             const data = await callBackendAPI(exText);

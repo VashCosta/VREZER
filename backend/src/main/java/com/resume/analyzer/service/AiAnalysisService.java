@@ -14,6 +14,9 @@ public class AiAnalysisService {
     @Value("${vone.core.key}")
     private String apiKey;
 
+    @Value("${vone.core.url}")
+    private String apiUrl;
+
     public String analyzeResume(String resumeText) {
         String candidateName = extractCandidateName(resumeText);
         Exception lastEx = new Exception("AI Timeout");
@@ -23,6 +26,7 @@ public class AiAnalysisService {
         } catch (Exception e) {
             lastEx = e;
             System.err.println("VREZER CORE ERROR: " + e.getMessage());
+            logAvailableModels();
         }
         System.err.println("AI failure after all attempts: " + lastEx.getMessage());
         return fallback(candidateName, lastEx.getMessage());
@@ -32,9 +36,8 @@ public class AiAnalysisService {
         RestTemplate rest = new RestTemplate();
         ObjectMapper mapper = new ObjectMapper();
 
-        // Construct model-specific URL
-        String modelUrl = "https://generativelanguage.googleapis.com/v1beta/models/" + modelId + ":generateContent?key="
-                + apiKey;
+        // Construct model-specific URL using configured apiUrl
+        String modelUrl = apiUrl + modelId + ":generateContent?key=" + apiKey;
 
         String prompt = "You are a senior career analyst for the Indian IT industry. " +
                 "Analyse this resume carefully and respond ONLY with valid JSON. " +
@@ -93,6 +96,17 @@ public class AiAnalysisService {
         throw new Exception("API failed (" + res.getStatusCode() + "): " + errorBody);
     }
 
+    private void logAvailableModels() {
+        try {
+            RestTemplate rest = new RestTemplate();
+            String listUrl = apiUrl.replace("/models/", "/models") + "?key=" + apiKey;
+            ResponseEntity<String> res = rest.getForEntity(listUrl, String.class);
+            System.err.println("VREZER CORE DIAGNOSTIC - Available Models: " + res.getBody());
+        } catch (Exception e) {
+            System.err.println("VREZER CORE DIAGNOSTIC - Failed to list models: " + e.getMessage());
+        }
+    }
+
     private String extractCandidateName(String text) {
         if (text == null || text.trim().isEmpty())
             return "Resume Candidate";
@@ -111,6 +125,25 @@ public class AiAnalysisService {
                     return clean;
                 }
             }
+        }
+        // Fallback: If no line matches, grab the first 2-3 words of the clean text (excluding common headers)
+        String cleanText = text.replaceAll("[^a-zA-Z\\s\\.]", " ").trim();
+        String[] words = cleanText.split("\\s+");
+        List<String> validWords = new ArrayList<>();
+        for (String w : words) {
+            String lw = w.toLowerCase();
+            if (lw.equals("resume") || lw.equals("curriculum") || lw.equals("vitae") || lw.equals("cv") || lw.equals("profile") || lw.equals("dossier")) {
+                continue;
+            }
+            if (w.length() > 1) {
+                validWords.add(w);
+            }
+            if (validWords.size() >= 3) {
+                break;
+            }
+        }
+        if (validWords.size() >= 2) {
+            return String.join(" ", validWords);
         }
         return "Resume Candidate";
     }
