@@ -16,34 +16,13 @@ public class AiAnalysisService {
 
     public String analyzeResume(String resumeText) {
         String candidateName = extractCandidateName(resumeText);
-        String[] models = { "gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-2.0-flash-exp",
-                "gemini-1.5-pro-latest" };
         Exception lastEx = new Exception("AI Timeout");
-        for (int i = 0; i < models.length; i++) {
-            String modelId = models[i];
-            try {
-                if (i > 0) {
-                    System.out.println("Retrying soon... Model: " + modelId);
-                    Thread.sleep(2500); // Wait 2.5s between models
-                }
-                System.out.println("VREZER CORE: Initiating strategic analysis...");
-                return callGemini(resumeText, modelId);
-            } catch (Exception e) {
-                lastEx = e;
-                String msg = e.getMessage().toLowerCase();
-                System.err.println("VREZER CORE ERROR: System instability detected.");
-
-                if (msg.contains("403")) {
-                    System.err.println("CRITICAL: API Key Rejected (403). Please check your GEMINI_API_KEY.");
-                    break;
-                }
-
-                if (msg.contains("429") || msg.contains("503") || msg.contains("404") || msg.contains("limit")) {
-                    continue;
-                } else {
-                    break;
-                }
-            }
+        try {
+            System.out.println("VREZER CORE: Initiating strategic analysis with gemini-1.5-flash...");
+            return callGemini(resumeText, "gemini-1.5-flash");
+        } catch (Exception e) {
+            lastEx = e;
+            System.err.println("VREZER CORE ERROR: " + e.getMessage());
         }
         System.err.println("AI failure after all attempts: " + lastEx.getMessage());
         return fallback(candidateName, lastEx.getMessage());
