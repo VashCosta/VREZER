@@ -74,6 +74,7 @@ body.light .topbar { background:rgba(255,250,250,0.92);box-shadow:0 1px 24px var
     -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
     filter: drop-shadow(0 0 15px rgba(255,0,0,0.6));
     text-transform: uppercase;
+    white-space: nowrap;
 }
 body.light .logo {
     background:linear-gradient(135deg,var(--v),#200000);
@@ -740,6 +741,27 @@ body.light .card:hover { box-shadow:0 8px 32px rgba(230,57,70,.14); }
     .predict-inner { flex-direction:column;gap:16px; }
 }
 @media(max-width:640px) {
+    :root {
+        --th: 60px;
+    }
+    .topbar {
+        padding: 0 12px;
+    }
+    .logo {
+        font-size: 1.6rem;
+        letter-spacing: -2px;
+    }
+    .system-status {
+        display: none;
+    }
+    .live-clock {
+        font-size: 0.85rem;
+        padding: 4px 10px;
+        border-radius: 8px;
+    }
+    .topbar-right {
+        gap: 8px;
+    }
     .row-a,.row-b,.row-d,.domain-grid { grid-template-columns:1fr; }
     .stats-strip { flex-wrap:wrap;justify-content:center; }
     #ticker-wrap { display:none; }
