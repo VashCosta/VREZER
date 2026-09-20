@@ -31,8 +31,8 @@ public class AiAnalysisService {
             System.err.println("VREZER CORE ERROR: " + e.getMessage());
             logAvailableModels();
         }
-        System.err.println("AI failure after all attempts: " + lastEx.getMessage());
-        return fallback(candidateName, lastEx.getMessage());
+        System.err.println("AI failure after Gemini attempts: " + lastEx.getMessage());
+        return errorResponse("AI_UNAVAILABLE", "VREZER Core could not complete this analysis. " + lastEx.getMessage());
     }
 
     public String analyzeResumePdf(MultipartFile file) throws Exception {
@@ -70,7 +70,6 @@ public class AiAnalysisService {
         content.put("parts", List.of(textPart, pdfPart));
         Map<String,Object> config = new HashMap<>();
         config.put("responseMimeType", "application/json");
-        config.put("temperature", 0.0);
         Map<String,Object> body = new HashMap<>();
         body.put("contents", List.of(content));
         body.put("generationConfig", config);
@@ -144,7 +143,7 @@ public class AiAnalysisService {
         content.put("parts", List.of(part));
         Map<String, Object> body = new HashMap<>();
         body.put("contents", List.of(content));
-        body.put("generationConfig", Map.of("responseMimeType", "application/json", "temperature", 0.3));
+        body.put("generationConfig", Map.of("responseMimeType", "application/json"));
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
