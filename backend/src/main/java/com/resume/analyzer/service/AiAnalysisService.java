@@ -170,6 +170,24 @@ public class AiAnalysisService {
         }
     }
 
+    private String errorResponse(String code, String message) {
+        try {
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("error", true);
+            result.put("code", code);
+            result.put("message", safeMessage(message));
+            return mapper.writeValueAsString(result);
+        } catch (Exception ignored) {
+            return "{\"error\":true,\"code\":\"AI_UNAVAILABLE\",\"message\":\"AI analysis failed.\"}";
+        }
+    }
+
+    private String safeMessage(String message) {
+        if (message == null || message.isBlank()) return "Unknown error.";
+        String clean = message.replaceAll("\\s+", " ").trim();
+        return clean.length() > 500 ? clean.substring(0, 500) + "..." : clean;
+    }
+
     private String extractCandidateName(String text) {
         if (text == null || text.trim().isEmpty())
             return "Resume Candidate";
