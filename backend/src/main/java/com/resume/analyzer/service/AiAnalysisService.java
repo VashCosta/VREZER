@@ -11,6 +11,8 @@ import java.util.*;
 @Service
 public class AiAnalysisService {
 
+    private final ObjectMapper mapper = new ObjectMapper();
+
     @Value("${vone.core.key}")
     private String apiKey;
 
