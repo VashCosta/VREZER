@@ -49,6 +49,34 @@ public class ResumeController {
         }
     }
 
+    /** Primary production endpoint: analyze the original PDF directly with Gemini. */
+    @PostMapping(value = "/analyze-pdf", consumes = "multipart/form-data", produces = "application/json")
+    public ResponseEntity<String> analyzePdf(@RequestParam("file") MultipartFile file) {
+        if (file == null || file.isEmpty() || !isPdfName(file)) {
+            return ResponseEntity.badRequest()
+                    .body("{\"error\":true,\"code\":\"INVALID_FILE\",\"message\":\"Please upload a valid PDF file.\"}");
+        }
+        try {
+            String result = aiAnalysisService.analyzeResumePdf(file);
+            return ResponseEntity.ok().header("Content-Type", "application/json").body(result);
+        } catch (Exception e) {
+            String msg = e.getMessage() == null ? "Unknown error." : e.getMessage().replaceAll("\\s+", " ").trim();
+            if (msg.length() > 300) msg = msg.substring(0, 300) + "...";
+            String body = "{\"error\":true,\"code\":\"AI_ANALYSIS_FAILED\",\"message\":\""
+                    + msg.replace("\\", "\\\\").replace("\"", "\\\"") + "\"}";
+            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).header("Content-Type", "application/json").body(body);
+        }
+    }
+
+    private boolean isPdfName(MultipartFile file) {
+        String name = file.getOriginalFilename();
+        if (name == null || !name.toLowerCase().endsWith(".pdf")) return false;
+        String type = file.getContentType();
+        return type == null || type.isBlank()
+                || type.equalsIgnoreCase("application/pdf")
+                || type.equalsIgnoreCase("application/octet-stream");
+    }
+
     /**
      * Performs AI analysis on the provided resume text using Gemini.
      */
