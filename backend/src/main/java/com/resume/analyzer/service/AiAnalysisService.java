@@ -21,8 +21,8 @@ public class AiAnalysisService {
         String candidateName = extractCandidateName(resumeText);
         Exception lastEx = new Exception("AI Timeout");
         try {
-            System.out.println("VREZER CORE: Initiating strategic analysis with gemini-1.5-flash...");
-            return callGemini(resumeText, "gemini-1.5-flash");
+            System.out.println("VREZER CORE: Initiating strategic analysis with gemini-3.8-flash...");
+            return callGemini(resumeText, "gemini-3.8-flash");
         } catch (Exception e) {
             lastEx = e;
             System.err.println("VREZER CORE ERROR: " + e.getMessage());
@@ -32,12 +32,72 @@ public class AiAnalysisService {
         return fallback(candidateName, lastEx.getMessage());
     }
 
+    public String analyzeResumePdf(MultipartFile file) throws Exception {
+        if (file == null || file.isEmpty()) throw new Exception("Uploaded PDF is empty.");
+        byte[] pdfBytes = file.getBytes();
+        Exception last = new Exception("Gemini PDF analysis failed.");
+        String[] models = {"gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash"};
+        for (String modelId : models) {
+            try { return callGeminiPdf(pdfBytes, modelId); }
+            catch (Exception e) {
+                last = e;
+                String m = e.getMessage() == null ? "" : e.getMessage().toLowerCase(Locale.ROOT);
+                if (!(m.contains("404") || m.contains("429") || m.contains("500") || m.contains("502") || m.contains("503"))) break;
+            }
+        }
+        throw last;
+    }
+
+    private String callGeminiPdf(byte[] pdfBytes, String modelId) throws Exception {
+        String modelUrl = apiUrl + modelId + ":generateContent";
+        String prompt = "Analyze the uploaded resume PDF itself, including scanned/image text. " +
+                "Use only document evidence plus conservative career knowledge. Do not invent facts. " +
+                "Return ONLY valid JSON with fields name, role, atsScore, summary, experience, education, " +
+                "tier1{role,company,salary,city,state}, tier2{role,company,salary,city,state}, " +
+                "tier3{role,company,salary,city,state}, topSkills[], skillGaps[], improvements[], prediction, " +
+                "domains[{name,icon,match,color,roles[]}]. Missing data = Not available; unreliable salary = Salary data unavailable. " +
+                "atsScore and match are integers 0-100; use the actual candidate domain.";
+
+        Map<String,Object> textPart = Map.of("text", prompt);
+        Map<String,Object> pdfData = new HashMap<>();
+        pdfData.put("mimeType", "application/pdf");
+        pdfData.put("data", Base64.getEncoder().encodeToString(pdfBytes));
+        Map<String,Object> pdfPart = Map.of("inlineData", pdfData);
+        Map<String,Object> content = new HashMap<>();
+        content.put("parts", List.of(textPart, pdfPart));
+        Map<String,Object> config = new HashMap<>();
+        config.put("responseMimeType", "application/json");
+        config.put("temperature", 0.0);
+        Map<String,Object> body = new HashMap<>();
+        body.put("contents", List.of(content));
+        body.put("generationConfig", config);
+        RestTemplate rest = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("x-goog-api-key", apiKey);
+        HttpEntity<String> entity = new HttpEntity<>(mapper.writeValueAsString(body), headers);
+        ResponseEntity<String> res = rest.postForEntity(modelUrl, entity, String.class);
+        if (!res.getStatusCode().is2xxSuccessful()) throw new Exception("Gemini API failed (" + res.getStatusCode().value() + ")");
+        JsonNode root = mapper.readTree(res.getBody());
+        JsonNode parts = root.path("candidates").path(0).path("content").path("parts");
+        if (!parts.isArray() || parts.isEmpty()) throw new Exception("Gemini returned no PDF analysis.");
+        String text = parts.get(0).path("text").asText("");
+        if (text.isBlank()) throw new Exception("Gemini returned empty PDF analysis.");
+        String cleaned = text.trim();
+        if (cleaned.startsWith("```")) {
+            int first = cleaned.indexOf("\n"), lastFence = cleaned.lastIndexOf("```");
+            if (first >= 0 && lastFence > first) cleaned = cleaned.substring(first + 1, lastFence).trim();
+        }
+        JsonNode analysis = mapper.readTree(cleaned);
+        if (!analysis.isObject()) throw new Exception("Gemini returned invalid analysis JSON.");
+        return mapper.writeValueAsString(analysis);
+    }
     private String callGemini(String resumeText, String modelId) throws Exception {
         RestTemplate rest = new RestTemplate();
         ObjectMapper mapper = new ObjectMapper();
 
         // Construct model-specific URL using configured apiUrl
-        String modelUrl = apiUrl + modelId + ":generateContent?key=" + apiKey;
+        String modelUrl = apiUrl + modelId + ":generateContent";
 
         String prompt = "You are a senior career analyst for the Indian IT industry. " +
                 "Analyse this resume carefully and respond ONLY with valid JSON. " +
@@ -85,6 +145,7 @@ public class AiAnalysisService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("x-goog-api-key", apiKey);
         HttpEntity<String> entity = new HttpEntity<>(mapper.writeValueAsString(body), headers);
 
         ResponseEntity<String> res = rest.postForEntity(modelUrl, entity, String.class);
