@@ -84,29 +84,14 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             resetDashboard();
 
-            // Backend parsing (preserves structure and newlines)
-            const fd = new FormData();
-            fd.append('file', currentFile);
-            const exRes = await fetch('/api/analyzer/extract', {
-                method: 'POST',
-                body: fd
-            });
-            if (!exRes.ok) {
-                const errText = await exRes.text();
-                throw new Error(errText || "Could not extract any readable text from this PDF.");
-            }
-            const exJson = await exRes.json();
-            const exText = exJson.text;
-
-            // Call Backend API
-            const data = await callBackendAPI(exText);
+            // Primary pipeline: send the original PDF directly to VREZER CORE.
+            if (loadMsg) loadMsg.textContent = 'Sending the original PDF to VREZER CORE…';
+            const data = await callBackendPdf(currentFile);
 
             clearInterval(iv);
 
             if (data.error) {
-                showToast(data.message || data.error || 'AI Engine syncing... Regional quota reset.', 'fa-solid fa-sync-alt');
-                setBtnCooldown(analyseBtn, 8000);
-                return;
+                throw new Error(data.message || data.error || 'VREZER Core analysis failed.');
             }
 
             if (progFill) progFill.style.width = '100%';
@@ -118,8 +103,8 @@ document.addEventListener('DOMContentLoaded', () => {
             let msg = err.message || 'Analysis connection lost.';
             if (msg.includes("API key not valid") || msg.includes("400") || msg.includes("403")) {
                 msg = "Invalid Gemini API Key provided.";
-            } else if (msg.length > 50) {
-                msg = msg.substring(0, 50) + "...";
+            } else if (msg.length > 220) {
+                msg = msg.substring(0, 220) + "...";
             }
             showToast(msg, 'fa-solid fa-wifi');
             hide(loadSect); show(uploadSect);
@@ -506,44 +491,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const iv = setInterval(() => { c = Math.min(c + Math.ceil(target / 40), target); el.textContent = c; if (c >= target) clearInterval(iv); }, speed);
     }
 
-    // ── CLIENT SIDE PARSING & API ──────────────────
-    async function extractTextFromPDF(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = async function() {
-                try {
-                    const typedarray = new Uint8Array(this.result);
-                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
-                    let fullText = '';
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const textContent = await page.getTextContent();
-                        const pageText = textContent.items.map(item => item.str).join(' ');
-                        fullText += pageText + ' ';
-                    }
-                    resolve(fullText);
-                } catch (e) {
-                    reject(e);
-                }
-            };
-            reader.onerror = reject;
-            reader.readAsArrayBuffer(file);
-        });
-    }
+    // ── BACKEND PDF API ─────────────────────────────
+    async function callBackendPdf(file) {
+        const fd = new FormData();
+        fd.append('file', file, file.name || 'resume.pdf');
 
-    async function callBackendAPI(text) {
-        const url = '/api/analyzer/analyze';
-        const res = await fetch(url, {
+        const res = await fetch('/api/analyzer/analyze-pdf', {
             method: 'POST',
-            headers: { 'Content-Type': 'text/plain' },
-            body: text
+            body: fd
         });
+
+        let payload = null;
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes("application/json")) {
+            try { payload = await res.json(); } catch (_) { payload = null; }
+        }
 
         if (!res.ok) {
-            const errText = await res.text();
-            throw new Error(errText || "Backend API call failed");
+            if (payload && payload.message) throw new Error(payload.message);
+            let raw = "";
+            try { raw = await res.text(); } catch (_) { /* ignore */ }
+            throw new Error(raw || ('Backend request failed (' + res.status + ').'));
         }
-        
-        return await res.json();
+
+        if (!payload || typeof payload !== 'object') throw new Error('VREZER Core returned an invalid analysis response.');
+        return payload;
     }
 });
